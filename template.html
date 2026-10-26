@@ -28,7 +28,7 @@ const L=a=>a&&a.length?'<ul>'+a.map(x=>'<li>'+E(x)+'</li>').join('')+'</ul>':'<s
 const D=d=>d?d.split('-').reverse().join('.'):'';
 const sec=(t,h)=>`<details><summary>${t}</summary><div class="in">${h}</div></details>`;
 const EV=[['תלונות','תלונות'],['הידרציה','הידרציה'],['תזונה / לא אוכלת מספיק','תזונה'],['בליעה / אספירציה','בליעה'],['היענות / תגובה לטיפול','היענות'],['שחיקה / אלימות במשפחה','משפחה'],['הפרעות שינה','שינה'],['כאב','כאב'],['מצב נשימתי','נשימה'],['פעולות מעיים / עצירות','מעיים'],['מצב רגשי','רגשי'],['פה וריריות','פה'],['הדרכה','הדרכה']];
-const FV=[['ADL','ADL'],['POS (כל חודשיים)','POS'],['נורטון','Norton'],['עור / פצעי לחץ','עור'],['הכרה / דליריום','הכרה'],['בדיקת טיפול תרופתי','תרופות'],['נפילות','נפילות'],['שליטה על מתן שתן','שתן'],['5 שאלות','5שאלות'],['מטפל עיקרי','מטפל']];
+const FV=[['ADL','ADL'],['POS (כל חודשיים)','POS'],['נורטון','Norton'],['עור / פצעי לחץ','עור'],['הכרה / דליריום','הכרה'],['בדיקת טיפול תרופתי','תרופות'],['נפילות','נפילות'],['שליטה על מתן שתן','שתן'],['5 משאלות','5שאלות'],['מטפל עיקרי','מטפל']];
 const CL=a=>'<ul class="cl">'+a.map(([l,k])=>`<li><label><input type="checkbox"> ${l}</label> <button class="ib" onclick="info('${k}')" aria-label="מידע">ⓘ</button></li>`).join('')+'</ul>';
 function info(k){const c=INFO[k];if(!c)return;mo.innerHTML=`<div class="card"><button class="x" onclick="mo.hidden=true">✕</button><h3>${E(c.t)}</h3>${L(c.b)}<div class="src">מקור: ${c.u?`<a href="${c.u}" target="_blank" rel="noopener">${E(c.s)}</a>`:E(c.s)}</div><div class="lbl">תזכורת בלבד – לא מחליף נוהל או הוראת רופא.</div></div>`;mo.hidden=false}
 function home(){ttl.textContent='המטופלים שלי';back.hidden=true;
