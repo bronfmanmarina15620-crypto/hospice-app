@@ -1,11 +1,27 @@
-# אפליקציית מטופלים – מרינה (v1)
-- `data/<id>.json` – קובץ לכל מטופל. אחרי עדכון: `python3 build.py` → `hospice.html` (עצמאי, נתונים מוטמעים). לא לפרסם ברשת.
-- אסור: ת"ז, טלפון, כתובת, שמות מטפלים/בני משפחה (רק תפקיד).
-## Schema
-id, initials, sex, age (int|null), program, visit_frequency, doctor, caregiver (תפקיד), diagnoses[], risk_factors[], function, meds[], next_focus[] (דגשים לביקור הבא),
-visits[] {date YYYY-MM-DD, time, source, summary, fields{שם שדה: ערך}} – בסדר כרונולוגי, חדש אחרון; stats{} (שמור למגמות: pain, saturation, BP...),
-missing[], discrepancies[].
-סוכן מטופל: מוסיף visit בסוף, מעדכן next_focus/meds, מריץ build.py.
+# אפליקציית מטופלים – מרינה (טיפול תומך)
+אתר ציבורי (GitHub Pages) – **ראשי תיבות ותפקידים בלבד**. אסור: שמות מלאים (מטופל, מטפלים, משפחה, רופאים – "רופא/ה מטפל/ת"), ת"ז, טלפון, כתובת.
 
-- אופציונלי: referral (טקסט הפניה), meds_printout[] (רשימת תרופות מתדפיס כללית להשוואה; מוצגת עם אזהרה).
-- visit_frequency_days (int): מחשב 'ביקור הבא עד' מהביקור האחרון.
+## קבצים
+- `data/<id>.json` – תיק מטופל (אחד לכל מטופל).
+- `info.json` – כרטיסי ⓘ (הסבר + מקור) לכל פריט ברשימת הבדיקה.
+- `template.html` + `build.py` → `index.html` (האתר) ו־`hospice.html` (עותק עצמאי).
+
+## Schema – data/<id>.json
+- id, initials, sex, age, program, visit_frequency, visit_frequency_days (int – מחשב "ביקור הבא עד")
+- status: "active" | "discharged"; discharge_date: "YYYY-MM-DD" | null
+- doctor ("רופא/ה מטפל/ת"), caregiver (תפקיד), diagnoses[], risk_factors[], function, referral, meds[], next_focus[]
+- visits[]: {id "v1".., date, time, source, summary, fields{שדה: ערך}, amendments[{date, text}]}
+- summaries[]: {id "s1".., type "doc"|"short"|"fam"|"mail", date, visit_id, text, sent_to (למשל "וואטסאפ משפחה דרך עבודה", "מייל עבודה")}
+- missing[], discrepancies[], stats{}
+
+## כללי עדכון לסוכן מטופל (חובה)
+1. **אף פעם לא למחוק או לדרוס** פריט ב־visits או ב־summaries. ביקור חדש = הוספה בסוף. תיקון לביקור קיים = הוספה ל־amendments שלו.
+2. אחרי כל ביקור: להוסיף visit (עם fields באותם שמות שדה כמו קודם, כדי שההשוואה "שינויים מהביקור הקודם" תעבוד), לעדכן next_focus/meds.
+3. כל סיכום שנוצר/נשלח (רופא, קצר, משפחה, מייל עבודה) – להוסיף ל־summaries עם sent_to ו־visit_id. הסיכום מתבסס על כל ההיסטוריה ומציין שינויים מהביקור הקודם.
+4. שחרור: status="discharged", discharge_date. ההיסטוריה נשארת.
+5. לפרסם:
+   ```
+   cd /workspace/hospice-app && git pull --rebase && python3 build.py
+   git add data index.html && git commit -m "ר.ש. ביקור YYYY-MM-DD" && git push
+   ```
+   GitHub Pages מתעדכן תוך כדקה. כפתורי הסיכום באתר מייצרים טיוטה בלבד – הם לא שומרים לגיטהאב.
