@@ -295,7 +295,26 @@ const D=d=>d?d.split('-').reverse().join('.'):'';
 const sec=(t,h)=>`<details><summary>${t}</summary><div class="in">${h}</div></details>`;
 const EV=[['תלונות','תלונות'],['הידרציה','הידרציה'],['תזונה / לא אוכלת מספיק','תזונה'],['בליעה / אספירציה','בליעה'],['היענות / תגובה לטיפול','היענות'],['שחיקה / אלימות במשפחה','משפחה'],['הפרעות שינה','שינה'],['כאב','כאב'],['מצב נשימתי','נשימה'],['פעולות מעיים / עצירות','מעיים'],['מצב רגשי','רגשי'],['פה וריריות','פה'],['הדרכה','הדרכה']];
 const FV=[['ADL','ADL'],['POS (כל חודשיים)','POS'],['נורטון','Norton'],['עור / פצעי לחץ','עור'],['הכרה / דליריום','הכרה'],['בדיקת טיפול תרופתי','תרופות'],['נפילות','נפילות'],['שליטה על מתן שתן','שתן'],['5 משאלות','5שאלות'],['מטפל עיקרי','מטפל']];
-const CL=a=>'<ul class="cl">'+a.map(([l,k])=>`<li><label><input type="checkbox"> ${l}</label> <button class="ib" onclick="info('${k}')" aria-label="מידע">ⓘ</button></li>`).join('')+'</ul>';
+const SHEETS={
+  "endpoint": ""
+}
+;let CUR=null;
+const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const ck=()=>'cl_'+CUR,nk=()=>'cln_'+CUR;
+const CL=a=>{const s=LS.get(ck(),{});return '<ul class="cl">'+a.map(([l,k])=>`<li><label><input type="checkbox" class="cb" data-l="${E(l)}" ${s[l]?'checked':''} onchange="clSave()"> ${l}</label> <button class="ib" onclick="info('${k}')" aria-label="מידע">ⓘ</button></li>`).join('')+'</ul>'};
+function clSave(){const s={};document.querySelectorAll('.cb').forEach(c=>{if(c.checked)s[c.dataset.l]=1});LS.set(ck(),s);const n=document.getElementById('cln');if(n)LS.set(nk(),n.value)}
+function clMsg(t,ok){const e=document.getElementById('clm');e.textContent=t;e.style.color=ok?'#2f6f68':'#a3562b'}
+function clEnd(){return `<b>הערות לביקור:</b><textarea id="cln" style="min-height:80px" placeholder="הערות חופשיות (לא חובה)" oninput="clSave()">${E(LS.get(nk(),''))}</textarea><div class="btns"><button id="clb" onclick="clSend()">✔ סיימתי – שמור ביקור</button></div><div id="clm" class="lbl"></div>`}
+async function clSend(){clSave();const cb=[...document.querySelectorAll('.cb')];const d=new Date();
+const body={pid:CUR,date:d.toLocaleString('he-IL',{timeZone:'Asia/Jerusalem'}),checked:cb.filter(c=>c.checked).map(c=>c.dataset.l),unchecked:cb.filter(c=>!c.checked).map(c=>c.dataset.l),notes:document.getElementById('cln').value.trim()};
+if(!body.checked.length&&!body.notes){clMsg('לא סומן שום דבר ואין הערות – אין מה לשמור.');return}
+const url=(SHEETS.per_patient||{})[CUR]||SHEETS.endpoint;
+if(!url){clMsg('השמירה לגיליון עוד לא הופעלה. הסימונים וההערות נשמרו בטלפון ולא יימחקו – אפשר יהיה לשלוח אותם אחר כך.');return}
+const b=document.getElementById('clb');b.disabled=true;clMsg('שומרת…',true);
+try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),redirect:'follow'});const j=await r.json();if(!j.ok)throw new Error(j.error||'error');
+LS.set(ck(),{});LS.set(nk(),'');cb.forEach(c=>c.checked=false);document.getElementById('cln').value='';clMsg('✔ הביקור נשמר בגיליון ('+body.date+'). הרשימה נוקתה לביקור הבא.',true)}
+catch(e){clMsg('השמירה לגיליון נכשלה (אולי אין אינטרנט). הסימונים וההערות נשארו בטלפון – נסי שוב עוד מעט.')}
+finally{b.disabled=false}}
 function info(k){const c=INFO[k];if(!c)return;mo.innerHTML=`<div class="card"><button class="x" onclick="mo.hidden=true">✕</button><h3>${E(c.t)}</h3>${L(c.b)}<div class="src">מקור: ${c.u?`<a href="${c.u}" target="_blank" rel="noopener">${E(c.s)}</a>`:E(c.s)}</div><div class="lbl">תזכורת בלבד – לא מחליף נוהל או הוראת רופא.</div></div>`;mo.hidden=false}
 function home(){ttl.textContent='המטופלים שלי';back.hidden=true;
 m.innerHTML=P.map((p,i)=>{const v=p.visits.at(-1);return `<button class="pbtn" onclick="show(${i})">${E(p.name||p.initials)}<span>${p.age?'בן/בת '+p.age+' · ':''}ביקור אחרון ${v?D(v.date):'—'}${p.visit_frequency?' · '+E(p.visit_frequency):''}<br>${due(p)}</span></button>`}).join('');}
@@ -310,12 +329,12 @@ fam:`שלום, עדכון מביקור (${D(v.date)}):\n${v.summary}\nאני ז�
 mail:`סיכום ביקור – ${h}\n\n${Object.entries(v.fields||{}).map(([a,b])=>a+': '+b).join('\n')}\n\n${vtext(v)}\n\n${df}\n\nמרינה, אחות היחידה הפליאטיבית מחוז ת"א-יפו`}[k]}
 const ST={doc:'לרופא',short:'קצר',fam:'למשפחה',mail:'מייל עבודה'};
 function gen(i,k){document.getElementById('out').value=summ(P[i],k)}
-function show(i){const p=P[i],v=last(p);ttl.textContent=(p.name?p.name+' ('+p.initials+')':p.initials)+(p.status==='discharged'?' (שוחרר/ה '+D(p.discharge_date)+')':'');back.hidden=false;scrollTo(0,0);
+function show(i){const p=P[i],v=last(p);CUR=p.id;ttl.textContent=(p.name?p.name+' ('+p.initials+')':p.initials)+(p.status==='discharged'?' (שוחרר/ה '+D(p.discharge_date)+')':'');back.hidden=false;scrollTo(0,0);
 m.innerHTML=
 sec('רקע בקצרה',`<b>גיל:</b> ${p.age??'<span class="warn">חסר</span>'} · <b>מסגרת:</b> ${E(p.program)}<br><b>תדירות ביקורים:</b> ${E(p.visit_frequency)||'<span class="warn">חסר</span>'}<br>${due(p)}<br><b>רופא/ה:</b> ${E(p.doctor)}<br><b>מטפל עיקרי:</b> ${E(p.caregiver)}<br><b>תפקוד:</b> ${E(p.function)}<br><b>אבחנות:</b>${L(p.diagnoses)}<b>גורמי סיכון:</b>${L(p.risk_factors)}${p.allergies?.length?`<b>רגישויות:</b>${L(p.allergies)}`:''}${p.past?.length?`<b>בעיות בעבר:</b>${L(p.past)}`:''}${p.hospitalizations?.length?`<b>אשפוזים/רפואה דחופה:</b><p>${E(p.hospitalizations.join(', '))}</p>`:''}<b>תרופות כיום:</b>${L(p.meds)}${p.meds_printout?`<b class="warn">⚠ רשימה בתדפיס כללית (לא תואמת):</b>${L(p.meds_printout)}`:''}${p.referral?`<b>בהפניה:</b><p>${E(p.referral)}</p>`:''}`)+
 sec('סיכום הביקור האחרון',`<b>${D(v.date)} ${E(v.time)}</b><p>${E(v.summary)}</p>${Object.entries(v.fields||{}).map(([a,b])=>`<div><span class="lbl">${E(a)}:</span> ${E(b)}</div>`).join('')}`)+
 sec('דגשים לביקור הבא',L(p.next_focus))+
-sec('רשימת בדיקה לביקור',`<b>בכל ביקור:</b>${CL(EV)}<b>בביקור ראשון / בשינוי:</b>${CL(FV)}`)+
+sec('רשימת בדיקה לביקור',`<b>בכל ביקור:</b>${CL(EV)}<b>בביקור ראשון / בשינוי:</b>${CL(FV)}${clEnd()}`)+
 sec('היסטוריה (נשמרת עד שחרור)',sec(`ביקורים (${p.visits.length})`,[...p.visits].reverse().map(x=>sec(D(x.date)+' '+E(x.time),`<p>${E(x.summary)}</p>${(x.amendments||[]).map(a=>`<p class="warn">תיקון ${D(a.date)}: ${E(a.text)}</p>`).join('')}<div class="lbl">מקור: ${E(x.source)}</div>`)).join('')||'—')+sec(`סיכומים שנשלחו (${(p.summaries||[]).length})`,(p.summaries||[]).slice().reverse().map(s=>sec(D(s.date)+' · '+E(ST[s.type]||s.type)+(s.sent_to?' · '+E(s.sent_to):''),`<p style="white-space:pre-wrap">${E(s.text)}</p>`)).join('')||'<span class="lbl">עדיין לא נשמרו סיכומים. סיכום נשמר כשהסוכן מעדכן את הקובץ.</span>'))+
 sec('מגמות וסיכומים',`<p class="lbl">הכפתורים מייצרים טיוטה מכל ההיסטוריה (כולל שינויים מהביקור הקודם). הטיוטה לא נשמרת מכאן – שמירה קבועה נעשית דרך הסוכן.</p><div class="btns"><button onclick="gen(${i},'doc')">לרופא</button><button onclick="gen(${i},'short')">קצר</button><button onclick="gen(${i},'fam')">למשפחה</button><button onclick="gen(${i},'mail')">מייל עבודה</button></div><textarea id="out" readonly></textarea>`)+
 sec('חסר / לבדיקה',`<b>חסר:</b>${L(p.missing)}<b>אי־התאמות:</b>${L(p.discrepancies)}`);}
